@@ -5,7 +5,7 @@ public class SCell implements Cell {
     private String line;
     private int type;
     // Add your code here
-
+        // i just check
     public SCell(String s) {
         // Add your code here
         setData(s);

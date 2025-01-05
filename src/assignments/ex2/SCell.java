@@ -9,7 +9,6 @@ public class SCell implements Cell {
     public SCell(String s) {
         // Add your code here
         setData(s);
-        //testtestbkn
     }
 
     @Override

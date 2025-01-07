@@ -19,6 +19,7 @@ import java.io.IOException;
 public interface Sheet {
     /**
      * Check is the x,y coordinate is with in this table.
+     *
      * @param x - integer, x-coordinate of the table (starts with 0).
      * @param y - integer, y-coordinate of the table (starts with 0).
      * @return true iff the x,y coordinate is a valid entry (cell) with in this spreadsheet.

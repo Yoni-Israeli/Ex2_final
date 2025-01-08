@@ -143,4 +143,10 @@ class Ex2SheetTest {
         assertEquals("5.0", sheet.eval(0, 0));
         assertEquals("-1.0", sheet.eval(1, 1));
     }
+    @Test
+    void testCircularDependency1() {
+        sheet.set(0, 0, "=A1");
+        sheet.set(1, 0, "=A0");
+        assertEquals("ERR", sheet.eval(0, 0));  // במקרה של תלות מעגלית
+    }
 }

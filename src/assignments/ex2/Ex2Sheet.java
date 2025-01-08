@@ -70,59 +70,91 @@ public class Ex2Sheet implements Sheet {
      * @param y integer, y-coordinate of the cell.
      * @return the string that will be presented in the x,y cell
      */
+    // מערך למעקב אחר תאים בתהליך חישוב
+    private boolean[] isBeingEvaluated;
+
+    // מערך למעקב אחר תאים בתהליך חישוב
     public String eval(int x, int y) {
-        // אם התא לא מכיל נוסחה
-        if (data[y][x] == null || !data[y][x].startsWith("=")) {
-            return data[y][x];  // מחזיר את הערך של התא (כמו "5" או "hello")
+        // אתחול של isBeingEvaluated רק אם לא אתחלנו אותו עדיין
+        if (isBeingEvaluated == null) {
+            isBeingEvaluated = new boolean[width * height];
         }
 
-        // אם התא מכיל נוסחה, יש לחשב אותה
-        String formula = data[y][x].substring(1).trim();  // חותך את סימן "="
-
-        // פענוח הנוסחה
-        if (formula.contains("+")) {
-            String[] parts = formula.split("\\+");
-            double left = parseValue(parts[0].trim(), x, y);  // פענוח צד שמאל של הנוסחה
-            double right = parseValue(parts[1].trim(), x, y); // פענוח צד ימין של הנוסחה
-            return String.valueOf(left + right);
+        if (data[y][x] == null) {
+            return null;  // אם התא ריק, מחזירים null
         }
 
-        if (formula.contains("-")) {
-            String[] parts = formula.split("-");
-            double left = parseValue(parts[0].trim(), x, y);
-            double right = parseValue(parts[1].trim(), x, y);
-            return String.valueOf(left - right);
+        String cellContent = data[y][x].trim();
+
+        // אם התא מכיל מספר, נחזיר את הערך
+        if (cellContent.matches("-?\\d+(\\.\\d+)?")) {
+            return cellContent;  // אם התא מכיל רק מספר (כולל שליליים)
         }
 
-        if (formula.contains("*")) {
-            String[] parts = formula.split("\\*");
-            double left = parseValue(parts[0].trim(), x, y);
-            double right = parseValue(parts[1].trim(), x, y);
-            return String.valueOf(left * right);
+        // אם התא מכיל מחרוזת, נחזיר אותה
+        if (!cellContent.startsWith("=")) {
+            return cellContent;  // אם זה לא נוסחה, מחזירים את המחרוזת
         }
 
-        if (formula.contains("/")) {
-            String[] parts = formula.split("/");
-            double left = parseValue(parts[0].trim(), x, y);
-            double right = parseValue(parts[1].trim(), x, y);
-            if (right == 0) {
-                throw new ArithmeticException("Division by zero");
-            }
-            return String.valueOf(left / right);
-        }
-
-        // אם הנוסחה לא מתאימה לאף פעולה (הכנסת סוגיה מורכבת יותר), נעצור את החישוב
-        return formula;
+        // אם התא מכיל נוסחה, נבצע את החישוב
+        return evalFormula(x, y);
     }
 
-    // Helper method to handle value parsing, including cell references
-    private double parseValue(String part, int x, int y) {
-        if (part.matches("[A-Z]+\\d+")) {  // אם החלק הוא הפנייה לתא (כגון A1)
-            int refX = part.charAt(0) - 'A';  // מיקום עמודה
-            int refY = Integer.parseInt(part.substring(1)) - 1; // מיקום שורה (עם התאמה של אינדקסים)
-            return Double.parseDouble(eval(refX, refY));  // חישוב ערך התא המפנה
+    private String evalFormula(int x, int y) {
+        // אם יש כבר תהליך חישוב בתא זה, זיהינו תלות מעגלית
+        if (isBeingEvaluated[y * width + x]) {
+            return "ERR_CYCLE";  // מחזירים שגיאה על תלות מעגלית
+        }
+
+        isBeingEvaluated[y * width + x] = true;  // מסמן את התא ככזה בתהליך חישוב
+
+        String formula = data[y][x].substring(1).trim();  // חותך את ה "=" ומסיר רווחים
+
+        try {
+            // טיפול בנוסחאות עם אופרטורים (חיבור, חיסור, כפל, חילוק)
+            if (formula.contains("+")) {
+                String[] parts = formula.split("\\+");
+                double left = evalExpression(parts[0].trim(), x, y);
+                double right = evalExpression(parts[1].trim(), x, y);
+                return String.valueOf(left + right);
+            } else if (formula.contains("-")) {
+                String[] parts = formula.split("-");
+                double left = evalExpression(parts[0].trim(), x, y);
+                double right = evalExpression(parts[1].trim(), x, y);
+                return String.valueOf(left - right);
+            } else if (formula.contains("*")) {
+                String[] parts = formula.split("\\*");
+                double left = evalExpression(parts[0].trim(), x, y);
+                double right = evalExpression(parts[1].trim(), x, y);
+                return String.valueOf(left * right);
+            } else if (formula.contains("/")) {
+                String[] parts = formula.split("/");
+                double left = evalExpression(parts[0].trim(), x, y);
+                double right = evalExpression(parts[1].trim(), x, y);
+                if (right == 0) {
+                    return "ERR_DIV_ZERO";  // טיפול בחלוקה באפס
+                }
+                return String.valueOf(left / right);
+            } else {
+                // אם אין אופרטור, מדובר בנוסחה של תא אחר
+                double value = evalExpression(formula, x, y);
+                return String.valueOf(value);
+            }
+        } catch (Exception e) {
+            return "ERR";  // אם יש שגיאה כלשהי, נחזיר שגיאה כללית
+        } finally {
+            isBeingEvaluated[y * width + x] = false;  // מסמן את התא כגמור בתהליך חישוב
+        }
+    }
+
+    private double evalExpression(String expression, int x, int y) {
+        // אם מדובר בהפנייה לתא אחר (למשל, A1, B2 וכו')
+        if (expression.matches("[A-Z]+\\d+")) {
+            int refX = expression.charAt(0) - 'A';  // המרה לעמודה (עבור A, B, C וכו')
+            int refY = Integer.parseInt(expression.substring(1)) - 1;  // המרה לשורה (למשל 1 -> 0)
+            return Double.parseDouble(eval(refX, refY));  // חישוב הערך של התא המפנה אליו
         } else {
-            return Double.parseDouble(part);  // אם זה מספר רגיל, מחזירים אותו
+            return Double.parseDouble(expression);  // אם מדובר במספר, נחזיר את הערך
         }
     }
 

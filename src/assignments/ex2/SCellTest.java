@@ -7,58 +7,50 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class SCellTest {
 
-    private SCell cell;
-
-
-    @BeforeEach
-    public void setUp() {
-        // creating new object for each test
-        cell = new SCell("A99");
+    @Test
+    public void testGetData() {
+        SCell cell = new SCell("Test");
+        assertEquals("Test", cell.getData());  // לוודא שהנתונים מתקבלים כמו שצריך
     }
 
-    //test for order
     @Test
-    void getOrder() {
+    public void testSetData() {
+        SCell cell = new SCell("Initial Data");
+        cell.setData("New Data");
+        assertEquals("New Data", cell.getData());  // לוודא שהנתונים עודכנו
+    }
 
+    @Test
+    public void testGetType() {
+        SCell cell = new SCell("Test");
+        cell.setType(Ex2Utils.NUMBER);  // לדוגמה, סוג מספר
+        assertEquals(Ex2Utils.NUMBER, cell.getType());  // לוודא שהסוג נכון
+    }
+
+    @Test
+    public void testSetType() {
+        SCell cell = new SCell("Test");
+        cell.setType(Ex2Utils.TEXT);  // לדוגמה, סוג טקסט
+        assertEquals(Ex2Utils.TEXT, cell.getType());  // לוודא שהסוג עודכן
+    }
+
+    @Test
+    public void testGetOrder() {
+        SCell cell = new SCell("Test");
+        cell.setOrder(3);
+        assertEquals(3, cell.getOrder());  // לוודא שסדר החישוב נכון
+    }
+
+    @Test
+    public void testSetOrder() {
+        SCell cell = new SCell("Test");
         cell.setOrder(5);
-        assertEquals(5, cell.getOrder());
+        assertEquals(5, cell.getOrder());  // לוודא שסדר החישוב עודכן
     }
 
     @Test
-    void testToString() {
-        assertEquals("A99", cell.toString());
-    }
-
-    @Test
-    void setData() {
-
-        cell.setData("B45");
-        assertEquals("B45", cell.getData());
-    }
-
-    @Test
-    void getData() {
-
-        assertEquals("A99", cell.getData());
-    }
-
-    @Test
-    void getType() {
-
-        assertEquals(0, cell.getType());
-    }
-
-    @Test
-    void setType() {
-
-        cell.setType(3);
-        assertEquals(3, cell.getType());
-    }
-
-    @Test
-    void setOrder() {
-
-        cell.setOrder(7);
-        assertEquals(7, cell.getOrder());
+    public void testToString() {
+        SCell cell = new SCell("Test");
+        assertEquals("Test", cell.toString());  // לוודא שהטקסט מוצג כראוי
     }
 }

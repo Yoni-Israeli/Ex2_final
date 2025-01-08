@@ -1,77 +1,59 @@
 package assignments.ex2;
 
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class CellEntryTest {
+public class CellEntryTest {
 
-    @org.junit.jupiter.api.Test
-    void isValid() {
-
-    }
-
-    /**
-     * this lists of tests check if a string is valid index
-     */
+    // טסט למתודה isValid
     @Test
-    public void testValidIndex() {
-        CellEntry entry = new CellEntry("A5");
-        assertTrue(entry.isValid(), "A5 should be a valid index");
+    public void testIsValid() {
+        // טסטים לאינדקסים חוקיים
+        assertTrue(new CellEntry("A1").isValid());  // אות + מספר
+        assertTrue(new CellEntry("B99").isValid());  // אות + מספר דו ספרתי
+        assertTrue(new CellEntry("C01").isValid());  // אות + מספר עם אפס בראש
+        assertTrue(new CellEntry("Z99").isValid());  // אות אחר + מספר דו ספרתי
 
-        entry = new CellEntry("B99");
-        assertTrue(entry.isValid(), "B99 should be a valid index");
-
-        entry = new CellEntry("z10");
-        assertTrue(entry.isValid(), "z10 should be a valid index");
-
-        entry = new CellEntry("A0");
-        assertTrue(entry.isValid(), "A0 should be a valid index");
-
-        entry = new CellEntry("A99");
-        assertTrue(entry.isValid(), "A99 should be a valid index");
+        // טסטים לאינדקסים לא חוקיים
+        assertFalse(new CellEntry("A").isValid());  // מחרוזת קצרה מדי
+        assertFalse(new CellEntry("A100").isValid());  // מספר מחוץ לטווח
+        assertFalse(new CellEntry("1A").isValid());  // התחלה במספר ולא אות
+        assertFalse(new CellEntry("AB").isValid());  // שני תווים לא נכונים
+        assertFalse(new CellEntry("A-1").isValid());  // תו לא חוקי (מינוס)
     }
 
-    /**
-     * this test check the String length
-     */
+    // טסט למתודה getX
     @Test
-    public void testInvalidLength() {
-        CellEntry entry = new CellEntry("A");
-        assertFalse(entry.isValid(), "A should not be valid (less than 2 characters)");
+    public void testGetX() {
+        // טסטים למיקומים חוקיים
+        assertEquals(0, new CellEntry("A1").getX());  // A=0
+        assertEquals(1, new CellEntry("B1").getX());  // B=1
+        assertEquals(25, new CellEntry("Z1").getX()); // Z=25
 
-        entry = new CellEntry("ABCD");
-        assertFalse(entry.isValid(), "ABCD should not be valid (more than 2 characters)");
+        // טסטים לאינדקסים לא חוקיים
+        assertEquals(Ex2Utils.ERR, new CellEntry("1A").getX());  // התחלה במספר
+
     }
 
-    /**
-     * this tests check order of letters in the string
-     */
+    // טסט למתודה getY
     @Test
-    public void testInvalidFirstCharacter() {
-        CellEntry entry = new CellEntry("1a");
-        assertFalse(entry.isValid(), "1a should not be valid (second character is not a digit)");
+    public void testGetY() {
+        // טסטים למיקומים חוקיים
+        assertEquals(1, new CellEntry("A1").getY());  // A1 -> Y=1
+        assertEquals(99, new CellEntry("B99").getY());  // B99 -> Y=99
+        assertEquals(1, new CellEntry("C01").getY());  // C01 -> Y=1
 
-        entry = new CellEntry("Z101");
-        assertFalse(entry.isValid(), "Z101 should not be valid (number is greater than 99)");
+        // טסטים לאינדקסים לא חוקיים
+        assertEquals(Ex2Utils.ERR, new CellEntry("A").getY());  // לא מספר
+        assertEquals(Ex2Utils.ERR, new CellEntry("AA").getY());  // לא מספר
 
-        entry = new CellEntry("A@");
-        assertFalse(entry.isValid(), "A@ should not be valid (contains invalid character)");
-
-        entry = new CellEntry("1A");
-        assertFalse(entry.isValid(), "1A should not be valid (starts with digit then letter)");
-
-        entry = new CellEntry("Z-5");
-        assertFalse(entry.isValid(), "Z-5 should not be valid (negative number)");
     }
 
-
-
-    @org.junit.jupiter.api.Test
-    void getX() {
-    }
-
-    @org.junit.jupiter.api.Test
-    void getY() {
+    // טסט למתודה toString
+    @Test
+    public void testToString() {
+        assertEquals("A1", new CellEntry("A1").toString());  // פשוט מחזיר את המחרוזת כפי שהיא
+        assertEquals("B99", new CellEntry("B99").toString());
+        assertEquals("C01", new CellEntry("C01").toString());
     }
 }

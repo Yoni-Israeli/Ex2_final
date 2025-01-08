@@ -1,250 +1,301 @@
 package assignments.ex2;
 
 import java.io.*;
-// Add your documentation below:
+import java.util.*;
 
 public class Ex2Sheet implements Sheet {
-    private Cell[][] table;
-    // Add your code here
-    private int width;
-    private int height;
+    private String[][] data; // המידע בכל תא (כולל נוסחאות)
+    private boolean[][] evaluating; // מערך שמצביע אם תא נמצא בתהליך חישוב
+    private int width, height;
 
-    // ///////////////////
-    public Ex2Sheet(int x, int y) {
-        table = new SCell[x][y];
-        for (int i = 0; i < x; i = i + 1) {
-            for (int j = 0; j < y; j = j + 1) {
-                table[i][j] = new SCell("");
-            }
-        }
-        eval();
-    }
-
-    public Ex2Sheet() {
-        this(Ex2Utils.WIDTH, Ex2Utils.HEIGHT);
+    public Ex2Sheet(int width, int height) {
+        this.width = width;
+        this.height = height;
+        this.data = new String[height][width];
+        this.evaluating = new boolean[height][width]; // מאתחל מערך חדש
     }
 
     @Override
-    public String value(int x, int y) {
-        String ans = Ex2Utils.EMPTY_CELL;
-        // Add your code here
-
-        Cell c = get(x, y);
-        if (c != null) {
-            ans = c.toString();
-        }
-
-        /////////////////////
-        return ans;
-    }
-
-    @Override
-    public Cell get(int x, int y) {
-        return table[x][y];
-    }
-
-    @Override
-    public Cell get(String cords) {
-        Cell ans = null;
-        // Add your code here
-
-        /////////////////////
-        return ans;
+    public boolean isIn(int x, int y) {
+        return x >= 0 && x < width && y >= 0 && y < height;
     }
 
     @Override
     public int width() {
-        return table.length;
+        return this.width;
     }
 
     @Override
     public int height() {
-        return table[0].length;
+        return this.height;
     }
 
     @Override
-    public void set(int x, int y, String s) {
-        Cell c = new SCell(s);
-        table[x][y] = c;
-        // Add your code here
-
-        /////////////////////
+    public void set(int x, int y, String c) {
+        if (isIn(x, y)) {
+            data[y][x] = c;
+        }
     }
 
+    @Override
+    public SCell get(int x, int y) {
+        if (isIn(x, y)) {
+            return new SCell(data[y][x]);
+        }
+        return null;
+    }
+
+    @Override
+    public SCell get(String entry) {
+        int x = entry.charAt(0) - 'A';
+        int y = Integer.parseInt(entry.substring(1)) - 1;
+
+        if (isIn(x, y)) {
+            return new SCell(data[y][x]);
+        }
+        return null;
+    }
+
+    @Override
+    public String value(int x, int y) {
+        if (isIn(x, y)) {
+            return data[y][x];
+        }
+        return "";
+    }
+
+    /**
+     * Evaluates (computes) the value of the cell in the x,y coordinate.
+     * @param x integer, x-coordinate of the cell.
+     * @param y integer, y-coordinate of the cell.
+     * @return the string that will be presented in the x,y cell
+     */
+    public String eval(int x, int y) {
+        // אם התא לא מכיל נוסחה
+        if (data[y][x] == null || !data[y][x].startsWith("=")) {
+            return data[y][x];  // מחזיר את הערך של התא (כמו "5" או "hello")
+        }
+
+        // אם התא מכיל נוסחה, יש לחשב אותה
+        String formula = data[y][x].substring(1).trim();  // חותך את סימן "="
+
+        // פענוח הנוסחה
+        if (formula.contains("+")) {
+            String[] parts = formula.split("\\+");
+            double left = parseValue(parts[0].trim(), x, y);  // פענוח צד שמאל של הנוסחה
+            double right = parseValue(parts[1].trim(), x, y); // פענוח צד ימין של הנוסחה
+            return String.valueOf(left + right);
+        }
+
+        if (formula.contains("-")) {
+            String[] parts = formula.split("-");
+            double left = parseValue(parts[0].trim(), x, y);
+            double right = parseValue(parts[1].trim(), x, y);
+            return String.valueOf(left - right);
+        }
+
+        if (formula.contains("*")) {
+            String[] parts = formula.split("\\*");
+            double left = parseValue(parts[0].trim(), x, y);
+            double right = parseValue(parts[1].trim(), x, y);
+            return String.valueOf(left * right);
+        }
+
+        if (formula.contains("/")) {
+            String[] parts = formula.split("/");
+            double left = parseValue(parts[0].trim(), x, y);
+            double right = parseValue(parts[1].trim(), x, y);
+            if (right == 0) {
+                throw new ArithmeticException("Division by zero");
+            }
+            return String.valueOf(left / right);
+        }
+
+        // אם הנוסחה לא מתאימה לאף פעולה (הכנסת סוגיה מורכבת יותר), נעצור את החישוב
+        return formula;
+    }
+
+    // Helper method to handle value parsing, including cell references
+    private double parseValue(String part, int x, int y) {
+        if (part.matches("[A-Z]+\\d+")) {  // אם החלק הוא הפנייה לתא (כגון A1)
+            int refX = part.charAt(0) - 'A';  // מיקום עמודה
+            int refY = Integer.parseInt(part.substring(1)) - 1; // מיקום שורה (עם התאמה של אינדקסים)
+            return Double.parseDouble(eval(refX, refY));  // חישוב ערך התא המפנה
+        } else {
+            return Double.parseDouble(part);  // אם זה מספר רגיל, מחזירים אותו
+        }
+    }
+
+
+
+
+
+    /**
+     * Evaluates (computes) all the values of all the cells in this spreadsheet.
+     */
     @Override
     public void eval() {
-        int[][] dd = depth();
-        // Add your code here
-        for (int y = 0; y < height(); y++) {
-            for (int x = 0; x < width(); x++) {
-                Cell cell = table[y][x]; // מקבלים את התא הנוכחי
-                if (cell != null) {
-                    String cellValue = eval(x, y);
-                    table[y][x] = new SCell(cellValue);
-                }
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                eval(x, y);  // מחשבים את הערך של כל תא
             }
         }
-        // ///////////////////
     }
 
-    @Override
-    public boolean isIn(int xx, int yy) {
-        boolean ans = false;
-        // Add your code here
-        if (xx >= 0 && yy >= 0 && xx < width() && yy < height()) {
-            ans = true;
-        }
-        /////////////////////
-        return ans;
-    }
+    /**
+     *  Computes a 2D array of the same dimension as this SpreadSheet, each entry holds its dependency depth.
+     *  if a cell is not dependent on any other cell its depth is 0.
+     *  else assuming the cell depends on cell_1, cell_2... cell_n, the depth of a cell is
+     *  1+max(depth(cell_1), depth(cell_2), ... depth(cell_n)).
+     *  In case a cell os a circular dependency (e.g., c1 depends on c2 & c2 depends on c1) its depth should be -1.
+     */
 
     @Override
     public int[][] depth() {
-        int[][] ans = new int[width()][height()];
-        // Add your code here
+        int[][] depths = new int[height][width];
+        // אתחול מערך העומקים: -2 מציין שלא נבדק עדיין
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                depths[i][j] = -2;  // -2 מציין שלא נבדק
+            }
+        }
 
-        // ///////////////////
-        return ans;
+        // חישוב העומק של כל תא
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                if (depths[i][j] == -2) { // אם התא לא נבדק
+                    calculateDepth(j, i, depths, new HashSet<>());
+                }
+            }
+        }
+        return depths;
     }
+
+    private int calculateDepth(int x, int y, int[][] depths, Set<String> visited) {
+        // אם התא כבר ביקרנו בו (תלות מעגלית)
+        if (visited.contains(x + "," + y)) {
+            depths[y][x] = -1;  // תלות מעגלית
+            return -1;
+        }
+
+        // אם כבר חישבנו את העומק עבור התא, פשוט מחזירים את הערך
+        if (depths[y][x] != -2) {
+            return depths[y][x];
+        }
+
+        // סימון התא כביקור
+        visited.add(x + "," + y);
+
+        String cellData = data[y][x];
+
+        // אם התא לא מכיל נוסחה, החזר 0
+        if (cellData == null || !cellData.startsWith("=")) {
+            depths[y][x] = 0;
+            visited.remove(x + "," + y); // נסיים את הביקור בתא
+            return 0;
+        }
+
+        // חישוב העומק של כל התאים שהנוסחה תלויה בהם
+        String formula = cellData.substring(1); // חותכים את הסימן "="
+        String[] parts = formula.split("(?=[\\+\\-\\*/])|(?<=[\\+\\-\\*/])");
+
+        int maxDepth = 0;
+        for (String part : parts) {
+            part = part.trim();  // אם אין ערך, אל תנסה לקרוא trim()
+
+            // אם החלק הוא תא (למשל A1)
+            if (part.matches("[A-Z]+\\d+")) {
+                // שליפת קואורדינטות התא
+                int cellX = part.charAt(0) - 'A'; // המרה מעמודה כמו A ל-x
+                int cellY = Integer.parseInt(part.substring(1)) - 1; // המרה משורה כמו 1 ל-y
+
+                int dep = calculateDepth(cellX, cellY, depths, visited);
+                if (dep == -1) {
+                    depths[y][x] = -1;  // אם מצאנו תלות מעגלית, כל התאים בתלות הזו יהיו -1
+                    visited.remove(x + "," + y); // נסיים את הביקור בתא
+                    return -1;
+                }
+
+                maxDepth = Math.max(maxDepth, dep);
+            }
+        }
+
+        // העומק של התא הוא 1 + מקסימום העומקים של התאים שהוא תלוי בהם
+        depths[y][x] = maxDepth + 1;
+
+        visited.remove(x + "," + y); // נסיים את הביקור בתא
+        return depths[y][x];
+    }
+
+
+
+    @Override
+    public void save(String fileName) throws IOException {
+        // יצירת קובץ חדש בכתובת שנמסרה
+        BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+
+        // כותב את הכותרת
+        writer.write("I2CS ArielU: SpreadSheet (Ex2) assignment - this line should be ignored in the load method");
+        writer.newLine();
+
+        // עבור על כל התאים בגיליון
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                String cellData = data[i][j];
+                if (cellData != null && !cellData.isEmpty()) {
+                    // כותב את המיקום של התא (x,y), הערך שלו
+                    writer.write(j + "," + i + "," + cellData);
+                    writer.newLine();
+                }
+            }
+        }
+        // סוגר את ה-BufferedWriter
+        writer.close();
+    }
+
 
     @Override
     public void load(String fileName) throws IOException {
-        BufferedReader reader = null;
-        try {
-            // פתיחת הקובץ לקריאה
-            reader = new BufferedReader(new FileReader(fileName));
+        // קורא את הקובץ שהוזן
+        BufferedReader reader = new BufferedReader(new FileReader(fileName));
 
-            // דילוג על שורת הכותרת הראשונה (לא רלוונטית)
-            String line = reader.readLine();
+        // שורה ראשונה שהיא כותרת ויש להתעלם ממנה
+        String line = reader.readLine();
 
-            // קריאת הקובץ שורה אחרי שורה
-            while ((line = reader.readLine()) != null) {
-                // סינון שורות לא תקינות (יש לוודא שהשורה מתאימה לפורמט x,y,value)
-                String[] parts = line.split(",", -1); // פיצול לפי פסיקים
+        // קורא את כל שאר השורות בקובץ
+        while ((line = reader.readLine()) != null) {
+            // אם השורה מכילה מידע, נפרק אותה לפי פסיקים
+            String[] parts = line.split(",");
 
-                // ודא שהשורה מכילה בדיוק 3 חלקים: x, y וערך
-                if (parts.length >= 3) {
-                    try {
-                        // המרת x, y לערכים
-                        int x = Integer.parseInt(parts[0].trim());
-                        int y = Integer.parseInt(parts[1].trim());
-                        String value = parts[2].trim();
+            if (parts.length >= 3) {
+                try {
+                    int x = Integer.parseInt(parts[0]);
+                    int y = Integer.parseInt(parts[1]);
+                    String cellData = parts[2];
 
-                        // אם התא נמצא בטווח הגיליון, נעדכן אותו
-                        if (isIn(x, y)) {
-                            set(x, y, value);
-                        }
-                    } catch (NumberFormatException e) {
-                        // במקרה של חריגה בהמרה לא נוסיף את השורה, לכן מדלגים עליה
-                        continue;
+                    // אם התא בתא זה לא מחוץ לגבולות, נעדכן את הנתון
+                    if (isIn(x, y)) {
+                        set(x, y, cellData);
                     }
+                } catch (NumberFormatException e) {
+                    // אם יש טעות בפירוק המספרים, פשוט מתעלמים מהשורה הזו
                 }
             }
-        } finally {
-            // סגירת הקובץ אחרי קריאה
-            if (reader != null) {
-                reader.close();
-            }
         }
-    }
-    @Override
-    public void save(String fileName) throws IOException {
-        BufferedWriter writer = null;
-        try {
-            // יצירת קובץ חדש או פתיחה לקובץ קיים
-            writer = new BufferedWriter(new FileWriter(fileName));
-
-            // כתיבת כותרת ראשונית (שורה שלא מפורשת בהמשך)
-            writer.write("I2CS ArielU: SpreadSheet (Ex2) assignment - this line should be ignored in the load method\n");
-
-            // עבור כל תא במערך, נוודא שהוא לא ריק, ואז נכתוב אותו לקובץ
-            for (int x = 0; x < width(); x++) {
-                for (int y = 0; y < height(); y++) {
-                    // מקבלים את התא במיקום x, y
-                    String value = value(x, y); // הערך של התא בתור מיתר
-                    if (!value.equals(Ex2Utils.EMPTY_CELL)) { // אם התא לא ריק
-                        // כתיבת הערך לקובץ בפורמט x,y,value
-                        writer.write(x + "," + y + "," + value + "\n");
-                    }
-                }
-            }
-        } finally {
-            // סגירת ה-BufferedWriter אם פתחנו אותו בהצלחה
-            if (writer != null) {
-                writer.close();
-            }
-        }
-    }
-
-    @Override
-    public String eval(int x, int y) {
-        String ans = null;
-
-        // קבלת התא במיקום (x, y)
-        Cell cell = get(x, y);
-
-        if (cell != null) {
-            String cellData = cell.toString();
-
-            // אם התא מכיל נוסחה (מתחיל ב- "="), יש לבצע חישוב
-            if (cellData.startsWith("=")) {
-                String formula = cellData.substring(1); // חותכים את ה"=" מהנוסחה
-
-                // מחשבים את הערך של הנוסחה
-                ans = evaluateFormula(formula);
-            } else {
-                // אם לא נוסחה, מחזירים את הערך של התא ישירות
-                ans = cellData;
-            }
-        }
-        return ans;
-    }
-    private String evaluateFormula(String formula) {
-        double result = 0;
-        int index = 0;
-        boolean negative = false; // כדי לדעת אם החישוב צריך להיות שלילי או חיובי
-        char operator = '+'; // ברירת מחדל היא חיבור
-
-        // תו אחרי תו, נבצע את החישוב
-        while (index < formula.length()) {
-            char currentChar = formula.charAt(index);
-
-            // אם התו הוא ספרה או תו של מספר שלם
-            if (Character.isDigit(currentChar)) {
-                int numberStart = index;
-                while (index < formula.length() && Character.isDigit(formula.charAt(index))) {
-                    index++;
-                }
-                int number = Integer.parseInt(formula.substring(numberStart, index));
-
-                // אם יש פעולת כפל/חילוק (לפני) נבצע את הפעולה המתאימה
-                if (operator == '+') {
-                    result += (negative ? -number : number);
-                } else if (operator == '-') {
-                    result -= (negative ? -number : number);
-                } else if (operator == '*') {
-                    result *= (negative ? -number : number);
-                } else if (operator == '/') {
-                    result /= (negative ? -number : number);
-                }
-            }
-
-            // אם ישנו פעולה כמו חיבור, חיסור, כפל או חילוק
-            if (currentChar == '+' || currentChar == '-' || currentChar == '*' || currentChar == '/') {
-                operator = currentChar; // שימור הפעולה הנוכחית
-                index++;
-            }
-
-            // בדוק אם הפסקנו בגלל תו שגוי
-            else if (currentChar == ' ' || currentChar == '(' || currentChar == ')') {
-                index++;
-            }
-        }
-
-        return String.valueOf(result);
+        // סוגר את ה-BufferedReader
+        reader.close();
     }
 
 
+    public static class Cell {
+        private String data;
 
+        public Cell(String data) {
+            this.data = data;
+        }
 
+        public String getData() {
+            return data;
+        }
+    }
 }
